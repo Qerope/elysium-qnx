@@ -33,3 +33,6 @@ uint64_t virt_to_phys(const void *va);
 static inline unsigned long irq_save(void) { return 0; }
 static inline void irq_restore(unsigned long f) { (void)f; }
 #endif
+
+void kprintf(const char *fmt, ...);
+void panic(const char *msg) __attribute__((noreturn));

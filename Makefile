@@ -6,6 +6,7 @@ LDFLAGS := -nostdlib -T linker.ld
 
 KSRCS := kernel/asm.S kernel/boot.c kernel/kmain.c
 KLIBS :=
+KSRCS += kernel/kprintf.c
 
 build/kernel.elf: $(KSRCS) linker.ld $(KLIBS)
 	mkdir -p build
