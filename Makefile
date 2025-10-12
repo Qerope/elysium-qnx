@@ -16,3 +16,16 @@ build/kernel.elf: $(KSRCS) linker.ld $(KLIBS)
 
 run: build/kernel.elf
 	qemu-system-riscv64 -machine virt -nographic -m 256M -bios default -kernel $<
+
+HOSTCC ?= cc
+HOSTFLAGS := -std=gnu11 -O1 -g -Wall -Wextra -DELY_HOST -Iinclude -Itests
+TESTS := build/test_pmap
+
+build/test_pmap: tests/test_pmap.c kernel/pmap.c kernel/vm_page.c tests/host.c
+	mkdir -p build
+	$(HOSTCC) $(HOSTFLAGS) -o $@ $^
+test: $(TESTS)
+	for t in $(TESTS); do $$t || exit 1; done
+
+clean:
+	rm -rf build target
