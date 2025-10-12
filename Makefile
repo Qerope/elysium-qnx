@@ -8,6 +8,7 @@ KSRCS := kernel/asm.S kernel/boot.c kernel/kmain.c
 KLIBS :=
 KSRCS += kernel/kprintf.c
 KSRCS += kernel/vm_page.c
+KSRCS += kernel/pmap.c
 
 build/kernel.elf: $(KSRCS) linker.ld $(KLIBS)
 	mkdir -p build
