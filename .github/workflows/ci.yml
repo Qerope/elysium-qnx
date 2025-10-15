@@ -10,8 +10,13 @@ permissions:
 
 jobs:
   host-tests:
-    name: host tests
+    name: host tests (${{ matrix.cc }}${{ matrix.san == '1' && ', asan+ubsan' || '' }})
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        san: ['', '1']
     steps:
       - uses: actions/checkout@v4
-      - run: make test
+      - run: make test HOSTCC=${{ matrix.cc }} SAN=${{ matrix.san }}
