@@ -6,6 +6,7 @@ void kprintf(const char *fmt, ...);
 #include "sched.h"
 extern char _kend[];
 void boot_drop_identity(void);
+void trap_init(void);
 
 void kmain(uint64_t hartid, uint64_t dtb)
 {
@@ -14,5 +15,6 @@ void kmain(uint64_t hartid, uint64_t dtb)
     kprintf("elysium-qnx: hart %d\n", (int)hartid);
     vm_page_init(virt_to_phys(_kend), 64UL << 20);
     sched_init();
+    trap_init();
     for (;;) __asm__ volatile("wfi");
 }
