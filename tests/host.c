@@ -24,3 +24,8 @@ void panic(const char *msg)
 }
 
 void kprintf(const char *fmt, ...) { (void)fmt; }
+
+/* On the host every "task" shares the test process address space. */
+struct task;
+int copy_from_user(struct task *t, void *kdst, const void *usrc, size_t n) { (void)t; memcpy(kdst, usrc, n); return 0; }
+int copy_to_user(struct task *t, void *udst, const void *ksrc, size_t n) { (void)t; memcpy(udst, ksrc, n); return 0; }
