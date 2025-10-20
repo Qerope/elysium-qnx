@@ -11,6 +11,7 @@ KSRCS += kernel/vm_page.c
 KSRCS += kernel/pmap.c
 KSRCS += kernel/sched.c
 KSRCS += kernel/trap.c
+KSRCS += kernel/syscall.c
 
 build/kernel.elf: $(KSRCS) linker.ld $(KLIBS)
 	mkdir -p build
