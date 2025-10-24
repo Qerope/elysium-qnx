@@ -21,6 +21,17 @@ struct thread {
     enum tstate state;
     struct thread *next;
     struct task *task;
+    /* message passing */
+    const void *smsg;
+    size_t slen;
+    void *rmsg;
+    size_t rlen;
+    long status;                 /* result delivered when the thread is woken */
+    struct channel *blocked_on;  /* channel a T_SEND thread is queued on */
+    struct thread *server;       /* thread handling our message while we are T_REPLY */
+    void *rbuf;                  /* receive buffer while a server is T_RECV */
+    size_t rbuflen;
+    int *rcvid_out;
 };
 
 extern struct thread threads[MAX_THREADS];
