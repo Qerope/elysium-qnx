@@ -29,3 +29,9 @@ void kprintf(const char *fmt, ...) { (void)fmt; }
 struct task;
 int copy_from_user(struct task *t, void *kdst, const void *usrc, size_t n) { (void)t; memcpy(kdst, usrc, n); return 0; }
 int copy_to_user(struct task *t, void *udst, const void *ksrc, size_t n) { (void)t; memcpy(udst, ksrc, n); return 0; }
+
+#include "sched.h"
+
+struct thread threads[MAX_THREADS];
+struct thread *current;
+void sched_ready(struct thread *t) { t->state = T_READY; }

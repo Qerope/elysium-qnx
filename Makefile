@@ -13,6 +13,7 @@ KSRCS += kernel/sched.c
 KSRCS += kernel/trap.c
 KSRCS += kernel/syscall.c
 KSRCS += kernel/uaccess.c
+KSRCS += kernel/ipc.c
 
 build/kernel.elf: $(KSRCS) linker.ld $(KLIBS)
 	mkdir -p build

@@ -13,6 +13,8 @@ long syscall_dispatch(struct trapframe *tf)
 {
     long num = (long)tf->x[17];
     switch (num) {
+    case SYS_ChannelCreate: return ChannelCreate_();
+    case SYS_ConnectAttach: return ConnectAttach_((int)tf->x[10]);
     case SYS_Write: {
         const char *s = (const char *)tf->x[10];
         for (size_t i = 0; i < tf->x[11]; i++) kprintf("%s", (char[]){s[i], 0});
