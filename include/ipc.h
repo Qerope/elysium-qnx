@@ -10,3 +10,6 @@
 
 int ChannelCreate_(void);
 int ConnectAttach_(int chid);
+/* Returns 0 if the client is now blocked waiting for the reply, or -errno. The reply status
+   ends up in client->status after wakeup. */
+int ipc_send(struct thread *client, int coid, const void *smsg, size_t slen, void *rmsg, size_t rlen);
