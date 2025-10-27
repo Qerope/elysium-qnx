@@ -100,3 +100,42 @@ int ipc_send(struct thread *client, int coid, const void *smsg, size_t slen, voi
     enqueue_sender(ch, client);
     return 0;
 }
+
+long ipc_receive(struct thread *server, int chid, void *buf, size_t len, int *rcvid)
+{
+    if (chid < 0 || chid >= MAX_CHANNELS || !channels[chid].used) return -EBADF_;
+    struct channel *ch = &channels[chid];
+    struct thread *client = dequeue_sender(ch);
+    if (!client) {
+        server->rbuf = buf;
+        server->rbuflen = len;
+        server->rcvid_out = rcvid;
+        ch->receiver = server;
+        return 0;
+    }
+    long n = transfer_to_server(server, client, buf, len);
+    if (n < 0) return n;
+    client->server = server;
+    client->state = T_REPLY;
+    if (rcvid) *rcvid = client->id;
+    return n;
+}
+
+int ipc_reply(struct thread *server, int rcvid, long status, const void *msg, size_t len)
+{
+    int id = rcvid;
+    if (id <= 0 || id > MAX_THREADS) return -ESRCH_;
+    struct thread *client = &threads[id - 1];
+    if (client->state != T_REPLY || client->server != server) return -ESRCH_;
+    if (len > client->rlen) len = client->rlen;
+    if (len > MSG_MAX) len = MSG_MAX;
+    if (len) {
+        uint8_t bounce[MSG_MAX];
+        if (copy_from_user(server->task, bounce, msg, len)) return -EINVAL_;
+        if (copy_to_user(client->task, client->rmsg, bounce, len)) return -EINVAL_;
+    }
+    client->status = status;
+    client->server = NULL;
+    sched_ready(client);
+    return 0;
+}
