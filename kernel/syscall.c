@@ -25,6 +25,15 @@ long syscall_dispatch(struct trapframe *tf)
         sched_block();
         return current->status;
     }
+    case SYS_MsgReceive: {
+        long n = ipc_receive(current, (int)tf->x[10], (void *)tf->x[11], tf->x[12], (int *)tf->x[13]);
+        if (n != 0) return n;
+        current->state = T_RECV;
+        sched_block();
+        return current->status;
+    }
+    case SYS_MsgReply:
+        return ipc_reply(current, (int)tf->x[10], (long)tf->x[11], (const void *)tf->x[12], tf->x[13]);
     case SYS_Write: {
         const char *s = (const char *)tf->x[10];
         for (size_t i = 0; i < tf->x[11]; i++) kprintf("%s", (char[]){s[i], 0});
