@@ -20,3 +20,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: make test HOSTCC=${{ matrix.cc }} SAN=${{ matrix.san }}
+
+  static-analysis:
+    name: cppcheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - run: |
+          cppcheck --error-exitcode=1 --enable=warning,performance,portability \
+            --inline-suppr --suppress=missingIncludeSystem -Iinclude -DELY_HOST \
+            kernel/ipc.c kernel/pmap.c kernel/vm_page.c kernel/uaccess.c
