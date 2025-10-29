@@ -89,6 +89,7 @@ int ipc_send(struct thread *client, int coid, const void *smsg, size_t slen, voi
         long n = transfer_to_server(server, client, server->rbuf, server->rbuflen);
         if (n < 0) return (int)n;
         server->status = n;
+        if (client->prio > server->prio) server->prio = client->prio;
         if (server->rcvid_out)
             *server->rcvid_out = client->id;
         client->server = server;
@@ -115,6 +116,7 @@ long ipc_receive(struct thread *server, int chid, void *buf, size_t len, int *rc
     }
     long n = transfer_to_server(server, client, buf, len);
     if (n < 0) return n;
+    if (client->prio > server->prio) server->prio = client->prio;
     client->server = server;
     client->state = T_REPLY;
     if (rcvid) *rcvid = client->id;
@@ -136,6 +138,7 @@ int ipc_reply(struct thread *server, int rcvid, long status, const void *msg, si
     }
     client->status = status;
     client->server = NULL;
+    server->prio = server->base_prio;
     sched_ready(client);
     return 0;
 }
