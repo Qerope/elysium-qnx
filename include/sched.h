@@ -32,6 +32,7 @@ struct thread {
     void *rbuf;                  /* receive buffer while a server is T_RECV */
     size_t rbuflen;
     int *rcvid_out;
+    uint32_t gen;
 };
 
 extern struct thread threads[MAX_THREADS];
