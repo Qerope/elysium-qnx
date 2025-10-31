@@ -83,6 +83,7 @@ int ipc_send(struct thread *client, int coid, const void *smsg, size_t slen, voi
     client->slen = slen;
     client->rmsg = rmsg;
     client->rlen = rlen;
+    client->gen++;
     struct thread *server = ch->receiver;
     if (server) {
         ch->receiver = NULL;
@@ -91,7 +92,7 @@ int ipc_send(struct thread *client, int coid, const void *smsg, size_t slen, voi
         server->status = n;
         if (client->prio > server->prio) server->prio = client->prio;
         if (server->rcvid_out)
-            *server->rcvid_out = client->id;
+            *server->rcvid_out = (int)((client->gen << 16) | (uint32_t)client->id);
         client->server = server;
         client->state = T_REPLY;
         sched_ready(server);
@@ -119,15 +120,17 @@ long ipc_receive(struct thread *server, int chid, void *buf, size_t len, int *rc
     if (client->prio > server->prio) server->prio = client->prio;
     client->server = server;
     client->state = T_REPLY;
-    if (rcvid) *rcvid = client->id;
+    if (rcvid) *rcvid = (int)((client->gen << 16) | (uint32_t)client->id);
     return n;
 }
 
 int ipc_reply(struct thread *server, int rcvid, long status, const void *msg, size_t len)
 {
-    int id = rcvid;
+    int id = rcvid & 0xffff;
+    uint32_t gen = (uint32_t)rcvid >> 16;
     if (id <= 0 || id > MAX_THREADS) return -ESRCH_;
     struct thread *client = &threads[id - 1];
+    if (client->gen != gen || client->state == T_DEAD) return -ESRCH_;
     if (client->state != T_REPLY || client->server != server) return -ESRCH_;
     if (len > client->rlen) len = client->rlen;
     if (len > MSG_MAX) len = MSG_MAX;
