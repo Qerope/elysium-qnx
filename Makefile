@@ -25,11 +25,16 @@ run: build/kernel.elf
 HOSTCC ?= cc
 HOSTFLAGS := -std=gnu11 -O1 -g -Wall -Wextra -DELY_HOST -Iinclude -Itests
 TESTS := build/test_pmap
+TESTS := build/test_pmap build/test_ipc
 ifeq ($(SAN),1)
 HOSTFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer
 endif
 
 build/test_pmap: tests/test_pmap.c kernel/pmap.c kernel/vm_page.c tests/host.c
+	mkdir -p build
+	$(HOSTCC) $(HOSTFLAGS) -o $@ $^
+
+build/test_ipc: tests/test_ipc.c kernel/ipc.c tests/host.c
 	mkdir -p build
 	$(HOSTCC) $(HOSTFLAGS) -o $@ $^
 test: $(TESTS)
