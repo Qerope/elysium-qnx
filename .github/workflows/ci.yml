@@ -21,6 +21,23 @@ jobs:
       - uses: actions/checkout@v4
       - run: make test HOSTCC=${{ matrix.cc }} SAN=${{ matrix.san }}
 
+  kernel:
+    name: kernel build (riscv64)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-riscv64-unknown-elf
+      - run: make build/kernel.elf
+      - run: riscv64-unknown-elf-size build/kernel.elf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kernel-${{ github.sha }}
+          path: build/kernel.elf
+          retention-days: 14
+
   static-analysis:
     name: cppcheck
     runs-on: ubuntu-24.04
