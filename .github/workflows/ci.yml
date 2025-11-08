@@ -38,6 +38,22 @@ jobs:
           path: build/kernel.elf
           retention-days: 14
 
+  qemu-smoke:
+    name: boot under qemu
+    needs: kernel
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: kernel-${{ github.sha }}
+          path: build
+      - name: Install qemu
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-misc
+      - run: sh scripts/qemu-smoke.sh build/kernel.elf
+
   static-analysis:
     name: cppcheck
     runs-on: ubuntu-24.04
