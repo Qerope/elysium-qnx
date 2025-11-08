@@ -38,6 +38,9 @@ build/test_pmap: tests/test_pmap.c kernel/pmap.c kernel/vm_page.c tests/host.c
 build/test_ipc: tests/test_ipc.c kernel/ipc.c tests/host.c
 	mkdir -p build
 	$(HOSTCC) $(HOSTFLAGS) -o $@ $^
+smoke: build/kernel.elf
+	sh scripts/qemu-smoke.sh build/kernel.elf
+
 test: $(TESTS)
 	for t in $(TESTS); do $$t || exit 1; done
 
