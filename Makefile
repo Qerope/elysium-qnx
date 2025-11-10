@@ -15,6 +15,12 @@ KSRCS += kernel/syscall.c
 KSRCS += kernel/uaccess.c
 KSRCS += kernel/ipc.c
 KSRCS += kernel/shim.c
+RUSTTARGET := riscv64imac-unknown-none-elf
+RUSTLIB := target/$(RUSTTARGET)/release/libelysium_drivers.a
+KLIBS += $(RUSTLIB)
+
+$(RUSTLIB): $(shell find drivers -name '*.rs')
+	cargo build --release -p elysium_drivers --target $(RUSTTARGET)
 
 build/kernel.elf: $(KSRCS) linker.ld $(KLIBS)
 	mkdir -p build

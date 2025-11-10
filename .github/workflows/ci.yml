@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   host-tests:
     name: host tests (${{ matrix.cc }}${{ matrix.san == '1' && ', asan+ubsan' || '' }})
@@ -30,6 +33,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-riscv64-unknown-elf
+      - uses: dtolnay/rust-toolchain@1.90.0
+        with:
+          targets: riscv64imac-unknown-none-elf
+      - uses: Swatinem/rust-cache@v2
       - run: make build/kernel.elf
       - run: riscv64-unknown-elf-size build/kernel.elf
       - uses: actions/upload-artifact@v4
@@ -53,6 +60,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y qemu-system-misc
       - run: sh scripts/qemu-smoke.sh build/kernel.elf
+
+  rust:
+    name: rust drivers
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.90.0
+        with:
+          targets: riscv64imac-unknown-none-elf
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: clippy (target)
+        run: cargo clippy -p elysium_drivers --release --target riscv64imac-unknown-none-elf
 
   static-analysis:
     name: cppcheck
