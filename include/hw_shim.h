@@ -15,3 +15,8 @@ int hw_irq_attach(unsigned irq, hw_irq_handler fn, void *arg);
 void *hw_dma_alloc(size_t size, uintptr_t *phys);
 
 void hw_log(const char *msg, size_t len);
+
+/* Provided by the Rust uart driver. */
+void uart_rs_init(uintptr_t base);
+void uart_rs_putc(uint8_t c);
+int uart_rs_getc(void);   /* -1 if nothing is waiting */

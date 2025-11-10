@@ -3,10 +3,23 @@
 
 #include "kernel.h"
 #include "sbi.h"
+#include "hw_shim.h"
+
+static int uart_ready;
 
 static void putc_(char c)
 {
+    if (uart_ready) {
+        uart_rs_putc((uint8_t)c);
+        return;
+    }
     sbi_putchar(c);
+}
+
+void console_use_uart(uintptr_t base)
+{
+    uart_rs_init(base);
+    uart_ready = 1;
 }
 
 static void put_num(uint64_t v, unsigned base)
