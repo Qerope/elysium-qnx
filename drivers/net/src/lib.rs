@@ -130,12 +130,13 @@ impl Virtqueue {
     }
     /// Next completed buffer as (slot, length written by the device).
     fn pop_used(&mut self) -> Option<(usize, usize)> {
+        core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
         let used = unsafe { core::ptr::read_volatile(self.used_idx) };
-        if self.last_used >= used {
+        if self.last_used == used {
             return None;
         }
         let e = unsafe { core::ptr::read_volatile(self.used_ring.add(self.last_used as usize % QUEUE_SIZE)) };
-        self.last_used += 1;
+        self.last_used = self.last_used.wrapping_add(1);
         self.in_flight[e.id as usize] = false;
         Some((e.id as usize, e.len as usize))
     }
@@ -247,5 +248,15 @@ impl NetDevice {
         self.tx.submit(slot, HDR_LEN + frame.len(), false);
         wr(self.base, reg::QUEUE_NOTIFY, 1);
         Ok(())
+    }
+
+    /// Copies the next received frame into `out` and returns its length.
+    pub fn rx(&mut self, out: &mut [u8]) -> Option<usize> {
+        let (slot, len) = self.rx.pop_used()?;
+        let n = len.saturating_sub(HDR_LEN).min(out.len());
+        unsafe { core::ptr::copy_nonoverlapping(self.rx.buf(slot).add(HDR_LEN), out.as_mut_ptr(), n) };
+        self.rx.submit(slot, BUF_SIZE, true); // give the buffer back to the device
+        wr(self.base, reg::QUEUE_NOTIFY, 0);
+        Some(n)
     }
 }
