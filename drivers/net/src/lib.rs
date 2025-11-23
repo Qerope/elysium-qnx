@@ -231,4 +231,21 @@ impl NetDevice {
         }
         wr(self.base, reg::QUEUE_NOTIFY, 0);
     }
+
+    /// Sends one ethernet frame (without the virtio header).
+    pub fn tx(&mut self, frame: &[u8]) -> Result<(), Error> {
+        if frame.len() + HDR_LEN > BUF_SIZE {
+            return Err(Error::TooBig);
+        }
+        while self.tx.pop_used().is_some() {} // reclaim finished sends
+        let slot = self.tx.free_slot().ok_or(Error::Full)?;
+        unsafe {
+            let buf = self.tx.buf(slot);
+            core::ptr::write_bytes(buf, 0, HDR_LEN);
+            core::ptr::copy_nonoverlapping(frame.as_ptr(), buf.add(HDR_LEN), frame.len());
+        }
+        self.tx.submit(slot, HDR_LEN + frame.len(), false);
+        wr(self.base, reg::QUEUE_NOTIFY, 1);
+        Ok(())
+    }
 }
