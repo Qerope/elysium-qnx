@@ -9,6 +9,11 @@
 static int user_copy(struct task *t, uint64_t uva, void *k, size_t n, int to_user)
 {
     uint8_t *kp = k;
+    if (!t) {  /* kernel thread: the "user" pointer is a kernel pointer */
+        if (to_user) memcpy((void *)(uintptr_t)uva, kp, n);
+        else memcpy(kp, (void *)(uintptr_t)uva, n);
+        return 0;
+    }
     while (n) {
         uint64_t pte = pmap_lookup(&t->pmap, uva);
         uint64_t need = PTE_U | (to_user ? PTE_W : PTE_R);
