@@ -126,3 +126,109 @@ pub fn parse(frame: &[u8]) -> Result<Rx<'_>, FrameError> {
         _ => Rx::Other,
     })
 }
+
+pub trait Radio {
+    fn send(&mut self, frame: &[u8]);
+    fn recv(&mut self, buf: &mut [u8]) -> Option<usize>;
+}
+
+/// Radio with nothing behind it; used until a real backend exists.
+pub struct NullRadio;
+
+impl Radio for NullRadio {
+    fn send(&mut self, _frame: &[u8]) {}
+    fn recv(&mut self, _buf: &mut [u8]) -> Option<usize> {
+        None
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum State {
+    Idle,
+    Scanning,
+    Authenticating(Mac),
+    Associating(Mac),
+    Associated { bssid: Mac, aid: u16 },
+    Failed,
+}
+
+pub struct Station<R: Radio> {
+    radio: R,
+    pub mac: Mac,
+    pub state: State,
+    ssid: [u8; 32],
+    ssid_len: usize,
+    seq: u16,
+}
+
+impl<R: Radio> Station<R> {
+    pub fn new(radio: R, mac: Mac) -> Station<R> {
+        Station { radio, mac, state: State::Idle, ssid: [0; 32], ssid_len: 0, seq: 0 }
+    }
+
+    fn next_seq(&mut self) -> u16 {
+        self.seq = (self.seq + 1) & 0x0fff;
+        self.seq
+    }
+
+    pub fn connect(&mut self, ssid: &[u8]) {
+        let n = ssid.len().min(32);
+        self.ssid[..n].copy_from_slice(&ssid[..n]);
+        self.ssid_len = n;
+        let mut buf = [0u8; 80];
+        let seq = self.next_seq();
+        if let Ok(len) = probe_request(&mut buf, &self.mac, &self.ssid[..n], seq) {
+            self.radio.send(&buf[..len]);
+            self.state = State::Scanning;
+        }
+    }
+
+    /// Feeds one received frame to the state machine.
+    pub fn handle(&mut self, frame: &[u8]) {
+        let mut buf = [0u8; 80];
+        let ssid_len = self.ssid_len;
+        match (self.state, parse(frame)) {
+            (State::Scanning, Ok(Rx::ProbeResponse { bssid, ssid })) if ssid == &self.ssid[..ssid_len] => {
+                let seq = self.next_seq();
+                if let Ok(n) = auth_request(&mut buf, &self.mac, &bssid, seq) {
+                    self.radio.send(&buf[..n]);
+                    self.state = State::Authenticating(bssid);
+                }
+            }
+            (State::Authenticating(bssid), Ok(Rx::Auth { status })) => {
+                if status != 0 {
+                    self.state = State::Failed;
+                    return;
+                }
+                let seq = self.next_seq();
+                let ssid = self.ssid;
+                if let Ok(n) = assoc_request(&mut buf, &self.mac, &bssid, &ssid[..ssid_len], seq) {
+                    self.radio.send(&buf[..n]);
+                    self.state = State::Associating(bssid);
+                }
+            }
+            (State::Associating(bssid), Ok(Rx::AssocResponse { status, aid })) => {
+                self.state = if status == 0 { State::Associated { bssid, aid } } else { State::Failed };
+            }
+            (_, Ok(Rx::Deauth)) => self.state = State::Idle,
+            _ => {}
+        }
+    }
+
+    /// Pulls frames from the radio until it has nothing more.
+    pub fn poll(&mut self) {
+        let mut buf = [0u8; 256];
+        while let Some(n) = self.radio.recv(&mut buf) {
+            let frame = buf;
+            self.handle(&frame[..n]);
+        }
+    }
+
+    pub fn state_code(&self) -> isize {
+        match self.state {
+            State::Idle | State::Failed => 0,
+            State::Associated { .. } => 2,
+            _ => 1,
+        }
+    }
+}
