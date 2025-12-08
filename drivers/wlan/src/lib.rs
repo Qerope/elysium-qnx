@@ -27,7 +27,8 @@ fn put_header(out: &mut [u8], fc: u16, da: &Mac, sa: &Mac, bssid: &Mac, seq: u16
     out[4..10].copy_from_slice(da);
     out[10..16].copy_from_slice(sa);
     out[16..22].copy_from_slice(bssid);
-    out[22..24].copy_from_slice(&seq.to_le_bytes());
+    // sequence control: 12 bit sequence number in the top bits, 4 bit fragment number below
+    out[22..24].copy_from_slice(&((seq & 0x0fff) << 4).to_le_bytes());
     HDR_LEN
 }
 
