@@ -233,3 +233,100 @@ impl<R: Radio> Station<R> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::VecDeque;
+    use std::vec::Vec;
+
+    const AP: Mac = [0x02, 0xaa, 0, 0, 0, 1];
+    const STA: Mac = [0x02, 0, 0, 0, 0, 1];
+
+    /// Access point answering probe, auth and assoc requests for one SSID.
+    struct FakeAp {
+        ssid: &'static [u8],
+        inbox: VecDeque<Vec<u8>>,
+        reject_auth: bool,
+    }
+
+    fn header(fc: u16, to: &Mac) -> Vec<u8> {
+        let mut v = std::vec![0u8; HDR_LEN];
+        put_header(&mut v, fc, to, &AP, &AP, 1);
+        v
+    }
+
+    impl Radio for FakeAp {
+        fn send(&mut self, frame: &[u8]) {
+            let fc = u16::from_le_bytes([frame[0], frame[1]]);
+            let mut sa = [0u8; 6];
+            sa.copy_from_slice(&frame[10..16]);
+            match fc {
+                FC_PROBE_REQ => {
+                    let mut r = header(FC_PROBE_RESP, &sa);
+                    r.extend_from_slice(&[0; 12]);
+                    r.push(0);
+                    r.push(self.ssid.len() as u8);
+                    r.extend_from_slice(self.ssid);
+                    self.inbox.push_back(r);
+                }
+                FC_AUTH => {
+                    let mut r = header(FC_AUTH, &sa);
+                    r.extend_from_slice(&[0, 0, 2, 0, if self.reject_auth { 1 } else { 0 }, 0]);
+                    self.inbox.push_back(r);
+                }
+                FC_ASSOC_REQ => {
+                    let mut r = header(FC_ASSOC_RESP, &sa);
+                    r.extend_from_slice(&[1, 0, 0, 0, 0x05, 0xc0]); // aid 5 with the two top bits set
+                    self.inbox.push_back(r);
+                }
+                _ => {}
+            }
+        }
+        fn recv(&mut self, buf: &mut [u8]) -> Option<usize> {
+            let f = self.inbox.pop_front()?;
+            buf[..f.len()].copy_from_slice(&f);
+            Some(f.len())
+        }
+    }
+
+    #[test]
+    fn associates() {
+        let ap = FakeAp { ssid: b"home", inbox: VecDeque::new(), reject_auth: false };
+        let mut sta = Station::new(ap, STA);
+        sta.connect(b"home");
+        assert_eq!(sta.state, State::Scanning);
+        sta.poll();
+        assert_eq!(sta.state, State::Associated { bssid: AP, aid: 5 });
+    }
+
+    #[test]
+    fn ignores_other_ssids() {
+        let ap = FakeAp { ssid: b"neighbour", inbox: VecDeque::new(), reject_auth: false };
+        let mut sta = Station::new(ap, STA);
+        sta.connect(b"home");
+        sta.poll();
+        assert_eq!(sta.state, State::Scanning);
+    }
+
+    #[test]
+    fn auth_rejection_fails() {
+        let ap = FakeAp { ssid: b"home", inbox: VecDeque::new(), reject_auth: true };
+        let mut sta = Station::new(ap, STA);
+        sta.connect(b"home");
+        sta.poll();
+        assert_eq!(sta.state, State::Failed);
+    }
+
+    #[test]
+    fn sequence_control_layout() {
+        let mut b = [0u8; 40];
+        probe_request(&mut b, &STA, b"x", 3).unwrap();
+        assert_eq!(u16::from_le_bytes([b[22], b[23]]), 3 << 4);
+    }
+
+    #[test]
+    fn short_frames_are_errors() {
+        assert_eq!(parse(&[0u8; 10]), Err(FrameError::Short));
+    }
+}
