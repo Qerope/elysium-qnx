@@ -75,6 +75,8 @@ jobs:
           targets: riscv64imac-unknown-none-elf
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
+      - name: wlan state machine tests (host)
+        run: cargo test -p wlan
       - name: clippy (target)
         run: cargo clippy -p elysium_drivers --release --target riscv64imac-unknown-none-elf
 
