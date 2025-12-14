@@ -57,3 +57,27 @@ pub extern "C" fn net_server(chid: i32, mmio_base: usize) -> ! {
         }
     }
 }
+
+/// Request: byte 0 = op (1 = connect, 2 = status), rest = SSID for connect.
+/// Status reply: 0 idle, 1 connecting, 2 associated.
+#[no_mangle]
+pub extern "C" fn wlan_server(chid: i32) -> ! {
+    let mut sta = wlan::Station::new(wlan::NullRadio, [0x02, 0, 0, 0, 0, 1]);
+    let mut req = [0u8; 64];
+    loop {
+        let mut rcvid = 0i32;
+        let n = unsafe { MsgReceive(chid, req.as_mut_ptr(), req.len(), &mut rcvid) };
+        if n < 1 {
+            continue;
+        }
+        let status = match req[0] {
+            1 => {
+                sta.connect(&req[1..n as usize]);
+                0
+            }
+            2 => sta.state_code(),
+            _ => -22,
+        };
+        unsafe { MsgReply(rcvid, status, core::ptr::null(), 0) };
+    }
+}
