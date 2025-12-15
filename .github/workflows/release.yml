@@ -1,0 +1,31 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-riscv64-unknown-elf
+      - uses: dtolnay/rust-toolchain@1.90.0
+        with:
+          targets: riscv64imac-unknown-none-elf
+      - run: make build/kernel.elf
+      - name: Package
+        run: |
+          mkdir dist
+          cp build/kernel.elf dist/elysium-qnx-${{ github.ref_name }}.elf
+          riscv64-unknown-elf-objcopy -O binary build/kernel.elf dist/elysium-qnx-${{ github.ref_name }}.bin
+          (cd dist && sha256sum * > SHA256SUMS)
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
