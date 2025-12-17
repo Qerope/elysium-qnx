@@ -79,6 +79,9 @@ jobs:
         run: cargo test -p wlan
       - name: clippy (target)
         run: cargo clippy -p elysium_drivers --release --target riscv64imac-unknown-none-elf
+      - name: rustfmt (advisory)
+        continue-on-error: true
+        run: cargo fmt --all -- --check
 
   static-analysis:
     name: cppcheck
