@@ -47,6 +47,13 @@ build/test_ipc: tests/test_ipc.c kernel/ipc.c tests/host.c
 smoke: build/kernel.elf
 	sh scripts/qemu-smoke.sh build/kernel.elf
 
+lint:
+	cppcheck --error-exitcode=1 --enable=warning,performance,portability --inline-suppr -Iinclude -DELY_HOST kernel/ipc.c kernel/pmap.c kernel/vm_page.c kernel/uaccess.c
+	cargo clippy -p elysium_drivers --release --target $(RUSTTARGET)
+
+fmt:
+	cargo fmt --all
+
 test: $(TESTS)
 	for t in $(TESTS); do $$t || exit 1; done
 
