@@ -25,14 +25,14 @@ jobs:
         cc: [gcc, clang]
         san: ['', '1']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: make test HOSTCC=${{ matrix.cc }} SAN=${{ matrix.san }}
 
   kernel:
     name: kernel build (riscv64)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install cross toolchain
         run: |
           sudo apt-get update
@@ -54,7 +54,7 @@ jobs:
     needs: kernel
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           name: kernel-${{ github.sha }}
@@ -69,7 +69,7 @@ jobs:
     name: rust drivers
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.90.0
         with:
           targets: riscv64imac-unknown-none-elf
@@ -87,7 +87,7 @@ jobs:
     name: cppcheck
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y cppcheck
       - run: |
           cppcheck --error-exitcode=1 --enable=warning,performance,portability \
