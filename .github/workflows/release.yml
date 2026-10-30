@@ -25,7 +25,7 @@ jobs:
           cp build/kernel.elf dist/elysium-qnx-${{ github.ref_name }}.elf
           riscv64-unknown-elf-objcopy -O binary build/kernel.elf dist/elysium-qnx-${{ github.ref_name }}.bin
           (cd dist && sha256sum * > SHA256SUMS)
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true
