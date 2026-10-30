@@ -43,7 +43,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: make build/kernel.elf
       - run: riscv64-unknown-elf-size build/kernel.elf
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: kernel-${{ github.sha }}
           path: build/kernel.elf
