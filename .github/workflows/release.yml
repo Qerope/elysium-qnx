@@ -15,7 +15,7 @@ jobs:
       - run: |
           sudo apt-get update
           sudo apt-get install -y gcc-riscv64-unknown-elf
-      - uses: dtolnay/rust-toolchain@1.90.0
+      - uses: dtolnay/rust-toolchain@1.120.0
         with:
           targets: riscv64imac-unknown-none-elf
       - run: make build/kernel.elf
